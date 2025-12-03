@@ -24,6 +24,7 @@
             id="textInput"
             placeholder="https://example.com"
             required
+            autofocus
             class="w-full px-3 py-2 bg-gray-700 border border-gray-600 text-white placeholder-gray-400 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent mb-4"
           />
           <div class="flex flex-col sm:flex-row gap-2 sm:gap-3">
@@ -181,7 +182,9 @@
         qrItem.appendChild(qrActions);
 
         qrContainer.insertBefore(qrItem, qrContainer.firstChild);
-        input.value = "";
+
+        // Select the text instead of clearing it
+        input.select();
 
         // Auto-open modal after generation
         showModal(itemText, qr);
