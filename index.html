@@ -4,79 +4,90 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>QR Code Generator</title>
-    <link
-      rel="stylesheet"
-      href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css"
-    />
+    <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js"></script>
-    <style>
-      .qr-item {
-        display: flex;
-        align-items: center;
-        gap: 1rem;
-        padding: 1rem;
-        margin-bottom: 1rem;
-        border: 1px solid var(--pico-muted-border-color);
-        border-radius: var(--pico-border-radius);
-      }
-      .qr-item img {
-        max-width: 100px;
-        height: auto;
-      }
-      .qr-item-content {
-        flex: 1;
-        overflow-wrap: break-word;
-      }
-      .qr-item-actions {
-        display: flex;
-        gap: 0.5rem;
-      }
-      #qrContainer {
-        margin-top: 2rem;
-      }
-      dialog img {
-        display: block;
-        margin: 0 auto;
-      }
-    </style>
   </head>
-  <body>
-    <main class="container">
-      <h1>Scott's QR Code Generator</h1>
-      <article>
+  <body class="bg-gray-900 min-h-screen p-4 sm:p-6 lg:p-8">
+    <main class="max-w-4xl mx-auto">
+      <h1 class="text-3xl sm:text-4xl font-bold text-white mb-6 sm:mb-8">
+        Scott's QR Code Generator
+      </h1>
+
+      <!-- Form Card -->
+      <div class="bg-gray-800 rounded-lg shadow-xl p-4 sm:p-6 mb-6 sm:mb-8">
         <form id="generatorForm">
-          <label>Enter some text:</label>
+          <label class="block text-sm font-medium text-gray-300 mb-2">
+            Enter some text:
+          </label>
           <input
             type="text"
             id="textInput"
             placeholder="https://example.com"
             required
+            class="w-full px-3 py-2 bg-gray-700 border border-gray-600 text-white placeholder-gray-400 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent mb-4"
           />
-          <div>
-            <button type="submit" id="submitBtn">Generate</button>
-            <button type="button" class="outline secondary" id="clearButton">
-              Delete All
+          <div class="flex flex-col sm:flex-row gap-2 sm:gap-3">
+            <button
+              type="submit"
+              id="submitBtn"
+              class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-md transition-colors disabled:bg-gray-600 disabled:cursor-not-allowed"
+            >
+              Generate
+              <span
+                class="text-xs ml-1 px-1.5 py-0.5 border border-white/30 rounded"
+                >ENTER</span
+              >
+            </button>
+            <button
+              type="button"
+              id="clearButton"
+              class="bg-gray-700 hover:bg-gray-600 text-gray-200 font-medium py-2 px-4 rounded-md transition-colors"
+            >
+              Clear
             </button>
           </div>
         </form>
-      </article>
+      </div>
 
-      <div id="qrContainer"></div>
+      <!-- QR Code Container -->
+      <div id="qrContainer" class="space-y-4"></div>
 
-      <!-- Modal for viewing QR code -->
-      <dialog id="qrModal">
-        <article>
-          <header>
-            <button aria-label="Close" rel="prev" id="closeModal"></button>
-            <h3>QR Code</h3>
-          </header>
-          <div id="modalContent"></div>
-          <footer>
-            <button class="secondary" id="downloadBtn">Download</button>
-          </footer>
-        </article>
+      <!-- Modal -->
+      <dialog
+        id="qrModal"
+        class="backdrop:bg-black backdrop:bg-opacity-75 rounded-lg shadow-xl p-0 max-w-md w-full bg-transparent"
+      >
+        <div class="bg-gray-800 rounded-lg">
+          <div
+            class="flex items-center justify-between p-4 border-b border-gray-700"
+          >
+            <h3 class="text-xl font-semibold text-white">QR Code</h3>
+            <button
+              id="closeModal"
+              class="text-gray-400 hover:text-gray-200 text-2xl leading-none"
+            >
+              ×
+            </button>
+          </div>
+          <div id="modalContent" class="p-6 bg-white flex justify-center"></div>
+          <div class="p-4 border-t border-gray-700 space-y-2">
+            <button
+              id="downloadBtn"
+              class="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-md transition-colors"
+            >
+              Download
+            </button>
+            <button
+              id="shareBtn"
+              class="w-full bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-4 rounded-md transition-colors hidden"
+            >
+              Share
+            </button>
+          </div>
+        </div>
       </dialog>
     </main>
+
     <script>
       const form = document.getElementById("generatorForm");
       const input = document.getElementById("textInput");
@@ -87,17 +98,20 @@
       const closeModal = document.getElementById("closeModal");
       const modalContent = document.getElementById("modalContent");
       const downloadBtn = document.getElementById("downloadBtn");
+      const shareBtn = document.getElementById("shareBtn");
 
       let currentQRData = null;
-
-      // Rate limiting
       let lastSubmitTime = 0;
       const minDelay = 1000;
+
+      // Check if Web Share API is supported
+      if (navigator.share) {
+        shareBtn.classList.remove("hidden");
+      }
 
       form.addEventListener("submit", (event) => {
         event.preventDefault();
 
-        // Check rate limit
         const now = Date.now();
         if (now - lastSubmitTime < minDelay) {
           alert("Please wait before generating another QR code");
@@ -105,12 +119,12 @@
         }
         lastSubmitTime = now;
 
-        // Disable button during generation
         submitBtn.disabled = true;
+        submitBtn.innerHTML =
+          'Generating... <span class="text-xs ml-1 px-1.5 py-0.5 border border-white/30 rounded">ENTER</span>';
 
         const itemText = input.value;
 
-        // Create QR code
         var typeNumber = 4;
         var errorCorrectionLevel = "L";
         var qr = qrcode(typeNumber, errorCorrectionLevel);
@@ -118,32 +132,44 @@
         qr.make();
 
         // Create QR item card
-        const qrItem = document.createElement("article");
-        qrItem.className = "qr-item";
+        const qrItem = document.createElement("div");
+        qrItem.className =
+          "bg-gray-800 rounded-lg shadow-xl p-4 flex flex-col sm:flex-row sm:items-center gap-4";
 
+        // QR Image - Make it clickable
         const qrImg = document.createElement("div");
         qrImg.innerHTML = qr.createImgTag(3, 5);
+        qrImg.className =
+          "flex-shrink-0 mx-auto sm:mx-0 cursor-pointer hover:opacity-80 transition-opacity";
+        qrImg.onclick = () => showModal(itemText, qr);
 
+        // Content
         const qrContent = document.createElement("div");
-        qrContent.className = "qr-item-content";
+        qrContent.className =
+          "flex-1 break-words text-center sm:text-left text-gray-300";
         qrContent.textContent = itemText;
 
+        // Actions
         const qrActions = document.createElement("div");
-        qrActions.className = "qr-item-actions";
+        qrActions.className =
+          "flex flex-col sm:flex-row gap-2 sm:flex-shrink-0";
 
         const viewBtn = document.createElement("button");
         viewBtn.textContent = "View";
-        viewBtn.className = "outline";
+        viewBtn.className =
+          "px-3 py-1.5 text-sm border border-blue-500 text-blue-400 hover:bg-blue-900/30 rounded-md transition-colors";
         viewBtn.onclick = () => showModal(itemText, qr);
 
         const downloadItemBtn = document.createElement("button");
         downloadItemBtn.textContent = "Download";
-        downloadItemBtn.className = "outline";
+        downloadItemBtn.className =
+          "px-3 py-1.5 text-sm border border-green-500 text-green-400 hover:bg-green-900/30 rounded-md transition-colors";
         downloadItemBtn.onclick = () => downloadQR(qr, itemText);
 
         const deleteBtn = document.createElement("button");
         deleteBtn.textContent = "Delete";
-        deleteBtn.className = "secondary outline";
+        deleteBtn.className =
+          "px-3 py-1.5 text-sm border border-red-500 text-red-400 hover:bg-red-900/30 rounded-md transition-colors";
         deleteBtn.onclick = () => qrItem.remove();
 
         qrActions.appendChild(viewBtn);
@@ -157,17 +183,21 @@
         qrContainer.insertBefore(qrItem, qrContainer.firstChild);
         input.value = "";
 
-        // Re-enable button after 1 second
+        // Auto-open modal after generation
+        showModal(itemText, qr);
+
         setTimeout(() => {
           submitBtn.disabled = false;
+          submitBtn.innerHTML =
+            'Generate <span class="text-xs ml-1 px-1.5 py-0.5 border border-white/30 rounded">ENTER</span>';
         }, 1000);
       });
 
       function showModal(text, qr) {
         modalContent.innerHTML = `
-          <div style="text-align: center;">
+          <div class="flex flex-col items-center">
             ${qr.createImgTag(8, 20)}
-            <p><strong>${text}</strong></p>
+            <p class="mt-4 text-gray-700 font-medium break-words text-center">${text}</p>
           </div>
         `;
         currentQRData = { text, qr };
@@ -191,8 +221,31 @@
         downloadQR(currentQRData.qr, currentQRData.text);
       });
 
+      shareBtn.addEventListener("click", async () => {
+        if (!currentQRData) return;
+
+        try {
+          // Convert QR code to blob
+          const dataUrl = currentQRData.qr.createDataURL(8, 20);
+          const response = await fetch(dataUrl);
+          const blob = await response.blob();
+          const file = new File([blob], `qrcode-${Date.now()}.png`, {
+            type: "image/png",
+          });
+
+          await navigator.share({
+            files: [file],
+            title: "QR Code",
+            text: currentQRData.text,
+          });
+        } catch (error) {
+          // User cancelled or error occurred
+          console.log("Share failed:", error);
+        }
+      });
+
       clearButton.addEventListener("click", () => {
-        qrContainer.innerHTML = "";
+        input.value = "";
       });
     </script>
   </body>
