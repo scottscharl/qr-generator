@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>QR Code Generator</title>
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css"
+    />
+    <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js"></script>
+    <style>
+      .qr-item {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        padding: 1rem;
+        margin-bottom: 1rem;
+        border: 1px solid var(--pico-muted-border-color);
+        border-radius: var(--pico-border-radius);
+      }
+      .qr-item img {
+        max-width: 100px;
+        height: auto;
+      }
+      .qr-item-content {
+        flex: 1;
+        overflow-wrap: break-word;
+      }
+      .qr-item-actions {
+        display: flex;
+        gap: 0.5rem;
+      }
+      #qrContainer {
+        margin-top: 2rem;
+      }
+      dialog img {
+        display: block;
+        margin: 0 auto;
+      }
+    </style>
+  </head>
+  <body>
+    <main class="container">
+      <h1>Scott's QR Code Generator</h1>
+      <article>
+        <form id="generatorForm">
+          <label>Enter some text:</label>
+          <input
+            type="text"
+            id="textInput"
+            placeholder="https://example.com"
+            required
+          />
+          <div>
+            <button type="submit" id="submitBtn">Generate</button>
+            <button type="button" class="outline secondary" id="clearButton">
+              Delete All
+            </button>
+          </div>
+        </form>
+      </article>
+
+      <div id="qrContainer"></div>
+
+      <!-- Modal for viewing QR code -->
+      <dialog id="qrModal">
+        <article>
+          <header>
+            <button aria-label="Close" rel="prev" id="closeModal"></button>
+            <h3>QR Code</h3>
+          </header>
+          <div id="modalContent"></div>
+          <footer>
+            <button class="secondary" id="downloadBtn">Download</button>
+          </footer>
+        </article>
+      </dialog>
+    </main>
+    <script>
+      const form = document.getElementById("generatorForm");
+      const input = document.getElementById("textInput");
+      const qrContainer = document.getElementById("qrContainer");
+      const clearButton = document.getElementById("clearButton");
+      const submitBtn = document.getElementById("submitBtn");
+      const qrModal = document.getElementById("qrModal");
+      const closeModal = document.getElementById("closeModal");
+      const modalContent = document.getElementById("modalContent");
+      const downloadBtn = document.getElementById("downloadBtn");
+
+      let currentQRData = null;
+
+      // Rate limiting
+      let lastSubmitTime = 0;
+      const minDelay = 1000;
+
+      form.addEventListener("submit", (event) => {
+        event.preventDefault();
+
+        // Check rate limit
+        const now = Date.now();
+        if (now - lastSubmitTime < minDelay) {
+          alert("Please wait before generating another QR code");
+          return;
+        }
+        lastSubmitTime = now;
+
+        // Disable button during generation
+        submitBtn.disabled = true;
+
+        const itemText = input.value;
+
+        // Create QR code
+        var typeNumber = 4;
+        var errorCorrectionLevel = "L";
+        var qr = qrcode(typeNumber, errorCorrectionLevel);
+        qr.addData(itemText);
+        qr.make();
+
+        // Create QR item card
+        const qrItem = document.createElement("article");
+        qrItem.className = "qr-item";
+
+        const qrImg = document.createElement("div");
+        qrImg.innerHTML = qr.createImgTag(3, 5);
+
+        const qrContent = document.createElement("div");
+        qrContent.className = "qr-item-content";
+        qrContent.textContent = itemText;
+
+        const qrActions = document.createElement("div");
+        qrActions.className = "qr-item-actions";
+
+        const viewBtn = document.createElement("button");
+        viewBtn.textContent = "View";
+        viewBtn.className = "outline";
+        viewBtn.onclick = () => showModal(itemText, qr);
+
+        const downloadItemBtn = document.createElement("button");
+        downloadItemBtn.textContent = "Download";
+        downloadItemBtn.className = "outline";
+        downloadItemBtn.onclick = () => downloadQR(qr, itemText);
+
+        const deleteBtn = document.createElement("button");
+        deleteBtn.textContent = "Delete";
+        deleteBtn.className = "secondary outline";
+        deleteBtn.onclick = () => qrItem.remove();
+
+        qrActions.appendChild(viewBtn);
+        qrActions.appendChild(downloadItemBtn);
+        qrActions.appendChild(deleteBtn);
+
+        qrItem.appendChild(qrImg);
+        qrItem.appendChild(qrContent);
+        qrItem.appendChild(qrActions);
+
+        qrContainer.insertBefore(qrItem, qrContainer.firstChild);
+        input.value = "";
+
+        // Re-enable button after 1 second
+        setTimeout(() => {
+          submitBtn.disabled = false;
+        }, 1000);
+      });
+
+      function showModal(text, qr) {
+        modalContent.innerHTML = `
+          <div style="text-align: center;">
+            ${qr.createImgTag(8, 20)}
+            <p><strong>${text}</strong></p>
+          </div>
+        `;
+        currentQRData = { text, qr };
+        qrModal.showModal();
+      }
+
+      function downloadQR(qr, text) {
+        const dataUrl = qr.createDataURL(8, 20);
+        const link = document.createElement("a");
+        link.download = `qrcode-${Date.now()}.png`;
+        link.href = dataUrl;
+        link.click();
+      }
+
+      closeModal.addEventListener("click", () => {
+        qrModal.close();
+      });
+
+      downloadBtn.addEventListener("click", () => {
+        if (!currentQRData) return;
+        downloadQR(currentQRData.qr, currentQRData.text);
+      });
+
+      clearButton.addEventListener("click", () => {
+        qrContainer.innerHTML = "";
+      });
+    </script>
+  </body>
+</html>
